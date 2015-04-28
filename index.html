@@ -71,6 +71,9 @@
             $('#content_region_data').on('dblclick' , 'tr.is_editable td', function()
             {
                 var $this = $(this);
+
+                if ($this.hasClass('td-non-editable')) return false;
+
                 var cell_data = $this.html(); //содержимое ячейки
                 // сборка имени поля
                 var inp_field       = $this.data('nameforinput');
@@ -83,7 +86,7 @@
                 }
                 var inputstring = "<input type='text' size='5' value='"+ cell_data +"' name='"+ inp_name +"' id='"+ inp_name +"'>";
 
-                $this.empty().append( inputstring ).find('input').focus(); // колдунство :)
+                $this.empty().addClass('td-non-editable').append( inputstring ).find('input').focus(); // колдунство :)
             });
 
             // обработка кнопки SAVE
