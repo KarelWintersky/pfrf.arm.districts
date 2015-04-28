@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ПФРФ: Работа с хитрой таблицей</title>
+    <meta name="author" content="Scripting by Karel Wintersky, 25 Apr 2015">
+    <meta charset='UTF-8' />
+    <link rel="stylesheet" type="text/css" href="tpl/pfrf.districts.css" />
+    <script type="text/javascript" src="lib/html5shiv.js"></script>
+    <script type="text/javascript" src="lib/jquery.min.js"></script>
+    <script type="text/javascript" src="lib/kw.core.js"></script>
+    <script type="text/javascript" src="lib/kw.options.js"></script>
+    <script type="text/javascript" src="lib/kw.excel.js"></script>
+    <script type="text/javascript">
+        var updated_fields_object = {};
+        // var default_region = '78-spb';
+
+        function init()
+        {
+            // загрузка регионов из базы в селект 'selector-region'
+            var region_selector_data = preloadOptionsList('pfrf.districts.ajax.php?action=getregions', { 'action' : 'getregions' },'POST');
+            BuildSelector('region', region_selector_data);
+
+            if ((window.location.hash).substr(1) != '' ) {
+                // установка текущего региона на основе URL#hash
+                setSelectorsByHash('.selectable-by-hash');
+                // загрузка данных по региону
+                loadRegionData(null, 'region', '#content_region_data');
+            }
+        }
+
+        function loadRegionData(id, selector_name, target_id)
+        {
+            // получаем аббревиатуру текущего региона
+            var selected_region = $("select[name='"+ selector_name +"'] option:selected").val() /* || default_region */;
+            // сохраняем регион для экспорта
+            $("input[name='for_export:region']").val( selected_region );
+            setHashBySelectors('.selectable-by-hash');
+            // запрашиваем аяксом скрипт, который отдает результат
+            // вставляем его в блок данных 'target_id'
+            var region_request =
+                    $.ajax({
+                        cache   : false,
+                        type    : "POST",
+                        url     : "pfrf.districts.ajax.php",
+                        data    : {
+                            'action'  :   'loadregion',
+                            'region'  :   selected_region
+                        }});
+            region_request.done(function(html){
+                $(target_id).empty().append(html);
+            });
+
+            // end $.ajax
+        }
+
+        $(document).ready(function () {
+            init();
+
+            $('#actor-copyright').on('dblclick', function(){
+                if (confirm('Перейти в управляющий раздел?')) {
+                    window.location.href = 'pfrf.districts.admin.php';
+                }
+            });
+
+            // Обработка кнопки 'actor-loadregiondata' на основе селектора 'select-region'
+            $('#actor-loadregiondata').on('click' , function(){
+                loadRegionData(this, 'region', '#content_region_data')
+            });
+
+            // обработка двойного клика на ячейке - активация поля редактирования
+            $('#content_region_data').on('dblclick' , 'tr.is_editable td', function()
+            {
+                var $this = $(this);
+                var cell_data = $this.html(); //содержимое ячейки
+                // сборка имени поля
+                var inp_field       = $this.data('nameforinput');
+                var inp_district    = $this.parent().data('district');
+                var inp_region      = $this.parent().data('region');
+                var inp_name    = 'field:' + inp_region + ':' + inp_district + ':' + inp_field;
+
+                if (!(inp_name in updated_fields_object)) {
+                    updated_fields_object [ inp_name ] = null;
+                }
+                var inputstring = "<input type='text' size='5' value='"+ cell_data +"' name='"+ inp_name +"' id='"+ inp_name +"'>";
+
+                $this.empty().append( inputstring ).find('input').focus(); // колдунство :)
+            });
+
+            // обработка кнопки SAVE
+            $('.action-save').on('click', function(){
+                // Теперь нам надо все поля, которые мы пытались редактировать получить из массива
+                // updatedfields, получить их значения и отправить в скрипт , скрипт сам разберется,
+                // куда что вставлять на основе name:region:district:field
+
+                for (var objindex in updated_fields_object) {
+                    updated_fields_object[ objindex ] = $("input[name='"+ objindex +"']").val();
+                }
+                // теперь этот объект мы можем спокойно заворачивать в аякс (или сериализовать в пост)
+                // и отправлять в скрипт-обработчик.
+
+                if ($.isEmptyObject(updated_fields_object)) return false;
+
+                $.ajax({
+                    type    : "POST",
+                    url     : "pfrf.districts.ajax.php",
+                    data    : {
+                        'action'    :   'updatefields',
+                        'data'      :   updated_fields_object
+                    }
+                }).done(
+                        function(){
+                            // window.location.reload();
+                            loadRegionData(this, 'region', '#content_region_data');
+                            updated_fields_object = {};
+                        })
+                        .fail(
+                        function(){
+                            // вывести сообщение "что-то пошло не так"
+                            $("#content_region_data")
+                                    .empty()
+                                    .html("Что-то пошло совсем не так! Нет связи с сервером!")
+                                    .css("color", "red")
+                                    .show();
+                        });
+                // end $.ajax
+
+                console.log(updated_fields_object);
+            });
+
+            // обработка кнопки EXPORT
+            $("#input_report_filename")
+                    .on('focus', function(){
+                        if ($(this).val() == 'report.csv') $(this).val('');
+                    })
+                    .on('blur', function(){
+                        if ($(this).val() == '') $(this).val('report.csv');
+                    });
+            $("#actor-exportcsv").on('click' , function(){
+                var location = $(this).data('href')    + '?'
+                        + 'region='     + $("input[name='for_export:region']").val() + '&'
+                        + 'filename='   + $("#input_report_filename").val();
+
+                // console.log( location );
+                window.location.href = location;
+                return false;
+            });
+            // export to XLS
+            $("#actor-excel-export").on('click', function(){
+                tableToExcel('exportable', 'export');
+            });
+
+            // обработка блока ДОБАВИТЬ РАЙОН с мастер-паролем
+        } );
+
+    </script>
+</head>
+<body>
+
+<header>
+    <div id="panel-header-inner">
+        <div id="panel-header-copyright">
+            <span title="by Karel Wintersky ( karel.wintersky@yandex.ru ) " id="actor-copyright">©</span>
+            <h4 class="header-title">АРМ "Сбор статистики по районам"</h4>
+            |
+
+        </div>
+        <div id="panel-header-controls">
+            Регион: <select name="region" class="selectable-by-hash"></select>
+            <button id="actor-loadregiondata">Загрузить</button>
+        </div>
+        <div id="panel-header-config">
+            <button class="action-save">Сохранить</button>
+        </div>
+    </div>
+</header>
+
+<div id="content">
+
+    <div id="content_region_data"></div>
+    <hr>
+    <fieldset>
+        <legend>Экспорт</legend>
+        <input type="hidden" name="for_export:region" value="">
+        Имя файла: <input type="text" value="report.csv" size="25" name="for_export:report_filename" id="input_report_filename">
+        <button id="actor-exportcsv" data-href="pfrf.districts.export.php">Экспорт в CSV</button>
+        <button id="actor-excel-export">Экспорт EXCEL</button>
+        <button class="action-save float-right">Сохранить</button>
+    </fieldset>
+</div>
+<div class="copyright-bottom">
+    © Karel Wintersky, 24-27 March 2015, karel.wintersky at yandex.ru
+</div>
+
+</body>
+</html>

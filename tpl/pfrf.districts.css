@@ -1,0 +1,179 @@
+/* layout */
+/* layout/header */
+header {
+    position: fixed;
+    background-color: #fffacd;
+    width: 100%;
+    height: 40px;
+    top: 0;
+    left: 0;
+    box-shadow: 0 0 5px 0 #000;
+    z-index: 999;
+    display: table;
+}
+
+header #panel-header-inner {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+header #panel-header-inner .header-title {
+    overflow: auto;
+}
+
+header a {
+    text-decoration: none;
+    color: navy;
+}
+header a:hover {
+    color: red;
+}
+
+/* header specific styles */
+header > div {
+    font-size: 120%;
+    padding-left: 1em;
+    padding-top: 2px;
+}
+
+header #panel-header-copyright {
+    float: left;
+}
+
+header #panel-header-controls {
+    float: left;
+}
+
+#panel-header-copyright sub {
+    font-size: 50%;
+}
+
+header #panel-header-config {
+    float: right;
+    padding-right: 2em;
+}
+
+header button {
+    padding: 0; margin: 0;
+}
+
+header h4 {
+    display: inline;
+    color: navy;
+    padding-left: 0.5em;
+}
+
+button.panel-header-inner-button-logout {
+    font-size: large;
+}
+
+/* main wrapper */
+#content {
+    margin-top: 45px;
+    width: 100%;
+    padding-top: 10px;
+}
+
+/* table styles */
+tr.header td, th {
+    font-size: small;
+}
+tr.district td {
+    text-align: center;
+}
+tr.district td.district_title {
+    text-align: left;
+}
+.float-right {
+    float: right;
+}
+input {
+    text-indent: 5px;
+}
+#error_report {
+    display: none;
+}
+/* table highlight rows */
+table tr:hover {
+    background-color: #f0e68c;
+}
+table tr.header:hover > * {
+    background-color: white;
+}
+
+/* editable rows */
+table tr.is_editable {
+    background-color: #e0ffff;
+}
+
+table tr.is_editable:hover > *  {
+    background-color: #7fffd4;
+}
+
+/* layout/footer */
+footer {
+    font-size: small;
+    position: fixed;
+    background-color: #e0ffff;
+    width: 100%;
+    height: 25px;
+    font-size: 70%;
+    box-shadow: inset 0 0 5px 0 #000;
+    z-index: 999;
+    bottom: 0;
+    left: 0;
+    padding: 0;
+    margin: 0;
+    display: table;
+    color: red;
+}
+
+footer>span {
+    display: table-cell;
+    vertical-align: middle;
+    padding-left: 1em;
+}
+
+/* служебные стили */
+.hidden {
+    display: none;
+}
+
+.small , .small-text {
+    font-size: small;
+}
+
+.copyright-bottom {
+    font-size: xx-small;
+    text-align: right;
+    font-style: italic;
+}
+
+span.hint {
+    font-style: italic;
+    color: #005db1;
+}
+
+/* hacks */
+input[type="text"]:focus {
+    outline: none;
+}
+
+/* ajax spinner */
+#ajax-spinner {
+    display: none;
+    /* position: relative; */
+    position: absolute;
+    /* left: auto; */
+    top: 1px;
+    right: 5px; /* 270 - слева от jGrowl*/
+    width: 222px;
+    height: 28px;
+    z-index: 1000;
+    background: url('ajax_loader_flower1.gif');
+}
+
+/* классы главного меню */
+#main-menu a:hover {
+    color: #c71585;
+}
