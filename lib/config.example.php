@@ -12,32 +12,38 @@ class dbConfig
         'hostname' => array(
             'local'     => 'localhost',
             'sweb'      => '',
-            'pfrf'      =>  ''
+            'pfrf'      =>  '',
+            'remote'    =>  ''
         ),
         'username' => array(
             'local'     => '',
             'sweb'      => '',
-            'pfrf'      =>  ''
+            'pfrf'      =>  '',
+            'remote'    =>  ''
         ),
         'password' => array(
             'local'     => '',
             'sweb'      => '',
-            'pfrf'      =>  ''
+            'pfrf'      =>  '',
+            'remote'    =>  ''
         ),
         'database' => array(
             'local'     => '',
             'sweb'      => '',
-            'pfrf'      =>  ''
+            'pfrf'      =>  '',
+            'remote'    =>  ''
         ),
         'basepath' => array(
             'local'     => '/pfrf',
             'sweb'	    => '/pfrf',
-            'pfrf'      =>  ''
+            'pfrf'      =>  '',
+            'remote'    =>  ''
         ),
         'table_prefix'  => array(
             'local'     => '',
             'sweb'	    => '',
-            'pfrf'      =>  ''
+            'pfrf'      =>  '',
+            'remote'    =>  ''
         )
     );
     public static $db_table         = 'pfrf_reports_table';
