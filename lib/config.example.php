@@ -5,6 +5,7 @@
  */
 class dbConfig
 {
+    public static $debug_mode = FALSE;
     /**
      * @var array
      */

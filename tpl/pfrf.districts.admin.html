@@ -5,6 +5,7 @@
 
 <script src="lib/jquery.min.js"></script>
 <script src="tpl/jquery-ui-1.10.3.custom.min.js"></script>
+<script type="text/javascript" src="lib/kw.options.js"></script>
 <link rel="stylesheet" type="text/css" href="tpl/jquery-ui-1.10.3.custom.min.css">
 <link rel="stylesheet" type="text/css" href="tpl/pfrf.districts.css" />
 
@@ -54,8 +55,12 @@
 var button_id = 0;
 var fields_list = {};
 
-function ReloadContent(target){
-    $(target).empty().load("?action=list");
+function ReloadContent(target, region)
+{
+    //@todo: разделить вывод: выводить как количество записей, так и сами записи: количество выводится в легенду филдсета, записи - в блок данных филдсета. Как это сделать без обработки данных на стороне клиента? Придется отказаться от .load() в пользу...
+
+    var s_region = region ? '&region='+region : '';
+    $(target).empty().load("?action=list" + s_region);
 }
 
 function loadEditableFields() {
@@ -100,10 +105,7 @@ function CallAddItem(source, id)
 
     var dataset = getDataSet( fields_list , $form, 'add')
 
-    console.log( dataset );
-
     var getting = $.get( url, dataset );
-
     getting.done(function(data){
         var result = $.parseJSON(data);
         if (result['error']==0) {
@@ -122,9 +124,6 @@ function CallUpdateItem(source, id)
     var url = $form.attr("action");
 
     var dataset = getDataSet( fields_list , $form, 'edit', id);
-    console.log( dataset );
-
-    // var dataset = GetDataset($form, 'edit', id);
     var getting = $.get( url, dataset );
 
     getting.done(function(data){
@@ -231,6 +230,14 @@ function initInputFields( field_labels , fields_type, target )
 
 $(document).ready(function () {
     $.ajaxSetup({cache: false, async: false });
+
+    // загрузим регионы в селект (выбора региона на очистку)
+    var region_selector_data = preloadOptionsList('pfrf.districts.ajax.php?action=getregions', { 'action' : 'getregions' },'POST');
+    BuildSelector('region', region_selector_data, {
+        text: 'Все',
+        value: 'all_regions'
+    }, 'all_regions');
+
     /*
     * Поля ввода и вообще форма добавления/редактирования строятся на основе ответа функции
     * loadEditableFields() - Она выполняет запрос ?action=get-comments
@@ -289,13 +296,6 @@ $(document).ready(function () {
     });
 
     /* вызов и обработчик диалога РЕДАКТИРОВАНИЯ  */
-
-    $('#ref_list').on('click', '.action-edit', function() {
-        button_id = $(this).attr('name');
-
-        CallLoadItem("#edit_form", button_id);
-        $('#edit_form').dialog('open');
-    });
     $( "#edit_form" ).dialog({
         autoOpen: false,
         height: 600,
@@ -327,9 +327,40 @@ $(document).ready(function () {
         }
     });
 
-    //@hint:
-    // center all buttons in 'control' TD at output table CSS class can't be used because table built dynamically
+    $('#ref_list').on('click', '.action-edit', function() {
+        button_id = $(this).attr('name');
+
+        CallLoadItem("#edit_form", button_id);
+        $('#edit_form').dialog('open');
+    });
+
+    //@hint: center all buttons in 'control' TD at output table CSS class can't be used because table built dynamically
     $("td:has(button)").css('text-align', 'center');
+
+    // вызов обработчика "очистка регионов в районе"
+    $("#actor-clearregion").on('click', function(){
+        var url = '?action=clearregion';
+        var requestdata = {
+            password    : $("#master_password").val(),
+            region      : $("select[name='region'] option:selected").val()
+        };
+
+        var getting = $.get( url, requestdata );
+        getting.done(function(data){
+            var result = $.parseJSON(data);
+            if (result['error']==0) {
+                ShowErrorMessage("Данные по региону очищены")
+            } else {
+                ShowErrorMessage(result['message']);
+            }
+        });
+    });
+
+    // обработчик отображения районов по выбранному региону
+    $("#actor-showregion").on('click', function(){
+        var region      = $("select[name='region'] option:selected").val();
+        ReloadContent("#ref_list", region);
+    });
 
     $('#actor-quit').on('click', function(){
         window.location.href = 'index.html';
@@ -349,10 +380,10 @@ $(document).ready(function () {
             |
         </div>
         <div id="panel-header-controls">
-            <button type="button" id="actor-add">Добавить запись в справочник</button>
         </div>
         <div id="panel-header-config">
             Мастер-пароль: &nbsp;<input type="password" id="master_password" style="display:inline">
+
             <button id="actor-quit">Выход</button>
         </div>
 
@@ -360,17 +391,27 @@ $(document).ready(function () {
 </header>
 
 <div id="content">
-<!-- <fieldset class="result-list"></fieldset> -->
+    Регион:
+    <select name="region" class="selectable-by-hash"></select>
+    По региону:
+    <button id="actor-showregion">Показать записи</button>
+    |
+    <button id="actor-clearregion">Очистить данные</button>
+    <button type="button" id="actor-add" style="float:right">Добавить район</button>
+    <hr>
+    <fieldset>
+        <legend id="ref_list_region_title"></legend>
 
-    <div id="ref_list">
-    </div>
+        <div id="ref_list">
+        </div>
+
+    </fieldset>
 
     <!-- jQuery UI forms  -->
     <div id="add_form" title="Добавить запись" class="jquery-ui-form">
         <br>
         <form action="?action=insert">
             <fieldset id="fields_add">
-
             </fieldset>
         </form>
     </div>
@@ -378,15 +419,19 @@ $(document).ready(function () {
         <br>
         <form action="?action=update">
             <fieldset id="fields_edit">
-
             </fieldset>
         </form>
     </div>
 </div>
 
 <div class="copyright-bottom">
-    <br/>© Karel Wintersky, 24-28 March 2015, karel.wintersky at yandex.ru
+    <br/>© Karel Wintersky, 2015, karel.wintersky at yandex.ru
 </div>
 
 </body>
 </html>
+<!--
+History:
+v 1.0 : 24-28 March 2015
+v 1.1 : 29 May 2015
+-->

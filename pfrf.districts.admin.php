@@ -3,12 +3,6 @@ require_once('lib/kw.core.php');
 require_once('lib/kw.db.php');
 require_once('lib/kw.kwt.php');
 
-/* $SID = session_id();
-if(empty($SID)) session_start();
-if (!isLogged()) {
-    redirectToLogin();
-} */
-
 // Конфигурационные значения
 
 // Основная часть
@@ -47,9 +41,20 @@ function makeDataSet( $income, $template )
     }
     return $return;
 }
-function makeRequest()
-{
 
+/**
+ * Returns message if DEBUG_MODE, overwise return default message (more securable)
+ * @param $message
+ * @param string $default_message
+ * @return string
+ */
+function ifDebug($message, $default_message = '')
+{
+    if (dbConfig::$debug_mode) {
+        return $message;
+    } else {
+        return $default_message;
+    }
 }
 
 switch ($action) {
@@ -72,10 +77,10 @@ switch ($action) {
                 $result['data'][ $row['column_name'] ] = $row['column_comment'];
             }
             $result['state'] = 'ok';
-            $result['message'] = $q_comments;
+            $result['message'] = ifDebug($q_comments);
         } else {
             $result['state'] = 'error';
-            $result['message'] = $q_comments;
+            $result['message'] = ifDebug($q_comments);
         }
         $return = json_encode($result);
         break;
@@ -90,7 +95,7 @@ switch ($action) {
 
             $new_id = mysql_insert_id() or Die("Unable to get last insert id! Last request is [$qstr]");
 
-            $result['message'] = $qstr;
+            $result['message'] = ifDebug($qstr);
             $result['error'] = 0;
         } else {
             $result['message'] = 'Password incorrect!';
@@ -108,7 +113,7 @@ switch ($action) {
 
             $res = mysql_query($qstr, $link) or Die("Unable update data : ".$qstr);
 
-            $result['message'] = $qstr;
+            $result['message'] = ifDebug($qstr);
             $result['error'] = 0;
         } else {
             $result['message'] = 'Password incorrect!';
@@ -117,6 +122,49 @@ switch ($action) {
         $return = json_encode($result);
         break;
     } // case 'update
+    case 'clearregion':
+    {
+        if ($_GET['password'] == dbConfig::$master_password) {
+            $escaped_region = isset($_GET['region'])
+                ? mysql_real_escape_string($_GET['region'])
+                : "all_regions";
+
+            $where_regions = ($escaped_region === "all_regions")
+                ? ""
+                : "WHERE region_abbr='{$escaped_region}'";
+
+            $q = array(
+                'fsd_recalc'        =>  '',
+                'fsd_navyplatu'     =>  '',
+                'dmo_indexing'      =>  '',
+                'dmo_navyplatu'     =>  '',
+                'neoplata'          =>  '',
+                'fovd_vedomostpochta'=>  '',
+                'fovd_sberbank'     =>  '',
+                'fovd_otherkreditors'=>  '',
+                'fovd_vedomostbank' =>  '',
+                'fovd_spiski'       =>  '',
+                'forming_dostavdocs'=>  '',
+                'frd_evneoplata'    =>  '',
+                'frd_70letgww'      =>  '',
+                'frd_neoplatadopmass'   =>  '',
+                'raschet_forming'   =>  '',
+                'raschet_spravka'   =>  ''
+            );
+
+            $qstr = MakeUpdate($link, $q, $reference, $where_regions);
+
+            $res = mysql_query($qstr, $link) or Die("Unable update data : ".$qstr);
+
+            $result['message'] = ifDebug($qstr);
+            $result['error'] = 0;
+        } else {
+            $result['message'] = 'Password incorrect!';
+            $result['error'] = 1;
+        }
+        $return = json_encode($result);
+        break;
+    }
     case 'remove':
     {
         if ($_GET['password'] == dbConfig::$master_password) {
@@ -181,10 +229,19 @@ WHERE TABLE_NAME = '{$reference}'";
         }
         $return = '';
 
+        // where clause
+        $escaped_region = isset($_GET['region'])
+            ? mysql_real_escape_string($_GET['region'])
+            : "all_regions";
+
+        $WHERE_CLAUSE = ($escaped_region === "all_regions")
+            ? ""
+            : " WHERE region_abbr='{$escaped_region}' ";
+
         //@todo: а вот это основной запрос (вероятно его тоже нужно строить на основе РАБОЧЕГО НАБОРА)
         // подумать
         $query = "SELECT id, district_title, district_abbr, region_title,
-        region_abbr, district_ipmask FROM {$reference}";
+        region_abbr, district_ipmask FROM {$reference} " . $WHERE_CLAUSE;
 
         $content_data = mysql_query( $query ) or die(mysql_error($link). ' query = ' . $query);
         $i = 0;
