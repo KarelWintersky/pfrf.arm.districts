@@ -1,23 +1,16 @@
 <?php
+/**
+ * User: Arris
+ * Date: 01.06.15, time: 8:01
+ */
+//@todo: переход на dbi
+
 require_once('lib/kw.core.php');
 require_once('lib/kw.db.php');
 require_once('lib/kw.kwt.php');
 require_once('lib/pfrf.core.php');
 
-// Конфигурационные значения
-
-// Основная часть
 $action = at($_GET, 'action', 'no-action');
-
-$link = ConnectDB( dbConfig::getConfig() );
-$reference = dbConfig::$db_table;
-$return = '';
-
-$incoming_data_abstract = array(
-    'data_int'      =>  '',
-    'data_str'      =>  '',
-    'data_comment'  =>  ''
-);
 
 $incoming_data = array(
     'district_title'    =>  'Район (строка на русском)',
@@ -27,12 +20,22 @@ $incoming_data = array(
     'district_ipmask'   =>  'IP-маска района',
 );
 
+$reference = dbConfig::$db_table;
+$link = ConnectDB( dbConfig::getConfig() );
+
+$return = '';
+
 switch ($action) {
-    case 'get-comments': // get comments
-    {
+    case 'get-comments' : {
         $result = array();
-        $q_comments = "SELECT column_name, column_comment FROM information_schema.COLUMNS " .
-            " WHERE TABLE_NAME = '{$reference}' AND column_name IN ( '". implode("' , '" , array_keys($incoming_data)) ."' )" ;
+        $q_comments =
+                "SELECT column_name, column_comment FROM information_schema.COLUMNS "
+                .
+                " WHERE TABLE_NAME = '{$reference}' AND column_name IN ( '"
+                .
+                implode("' , '" , array_keys($incoming_data))
+                .
+                "' )" ;
 
         $r = mysql_query($q_comments);
         $rn = @mysql_num_rows($r);
@@ -43,7 +46,6 @@ switch ($action) {
                     = ($row['column_comment'] != '')
                     ? $row['column_comment']
                     : $incoming_data[ $row['column_name'] ];
-
             }
             $result['state'] = 'ok';
             $result['message'] = ifDebug($q_comments);
@@ -51,11 +53,12 @@ switch ($action) {
             $result['state'] = 'error';
             $result['message'] = ifDebug($q_comments);
         }
+
         $return = json_encode($result);
         break;
-    } // case 'get-comments'
-    case 'insert':
-    {
+    } // end get-comments
+
+    case 'insert' : {
         if ($_GET['password'] == dbConfig::$master_password) {
             $q = makeDataSet( $_GET , $incoming_data);
             $qstr = MakeInsert($link, $q, $reference);
@@ -72,9 +75,9 @@ switch ($action) {
         }
         $return = json_encode($result);
         break;
-    } // case 'insert'
-    case 'update':
-    {
+    } // end insert
+
+    case 'update' : {
         if ($_GET['password'] == dbConfig::$master_password) {
             $id = intval($_GET['id']);
             $q = makeDataSet( $_GET , $incoming_data);
@@ -90,9 +93,11 @@ switch ($action) {
         }
         $return = json_encode($result);
         break;
-    } // case 'update
-    case 'clearregion':
-    {
+    } // end update
+
+    // обработчик "очистка региона" - специфическая функция
+    // очищает невизуализируемые поля по условию (region = ... )
+    case 'clearregion' : {
         if ($_GET['password'] == dbConfig::$master_password) {
             $escaped_region = isset($_GET['region'])
                 ? mysql_real_escape_string($_GET['region'])
@@ -133,9 +138,9 @@ switch ($action) {
         }
         $return = json_encode($result);
         break;
-    }
-    case 'remove':
-    {
+    } // end clearregion (
+
+    case 'remove' : {
         if ($_GET['password'] == dbConfig::$master_password) {
             $id = intval($_GET['id']);
 
@@ -151,18 +156,18 @@ switch ($action) {
                 $result['message'] = 'Ошибка удаления!';
             }
         } else {
-            $result['message'] = 'Password incorrect!';
+            $result['message'] = 'Неправильный пароль!';
             $result['error'] = 1;
         }
         $return = json_encode($result);
         break;
-    } // case 'remove
-    case 'load':
-    {
+    } // end remove
+
+    case 'load' : {
         $id = intval($_GET['id']);
+
         $WHERE_CLAUSE = "WHERE id={$id}";
 
-        // построим запрос только по изменяемым полям (смотри конфигурацию справочника)
         $query = "SELECT ";
         $query.= implode(" , ", array_keys($incoming_data));
         $query.= " FROM {$reference} ";
@@ -177,13 +182,13 @@ switch ($action) {
             $result['message'] = '';
         } else {
             $result['error'] = 1;
-            $result['message'] = 'Ошибка базы данных!';
+            $result['message'] = 'Ошибка доступа к базе данных!';
         }
         $return = json_encode($result);
         break;
-    } // case 'load'
-    case 'list':
-    {
+    } // end loat (element)
+
+    case 'list' : {
         $fields = array();
         $content_rows = array();
         $header_row = array();
@@ -222,6 +227,8 @@ WHERE TABLE_NAME = '{$reference}'";
         $content_data = mysql_query( $query ) or die(mysql_error($link). ' query = ' . $query);
         $i = 0;
 
+
+        // подготавливаем данные к визуализации
         if (@mysql_num_rows($content_data) > 0)
         {
             while ($ref_record = mysql_fetch_assoc($content_data))
@@ -249,7 +256,7 @@ caseListControlButtonDeclaration;
                 $i++;
             }
         }
-        // визуализация
+        // визуализация (заворачиваем "содержимое ячеек" в таблицу)
         $return .= <<<caseListOutputTableStart
 <table border="1" width="100%">
 caseListOutputTableStart;
@@ -279,22 +286,35 @@ caseListOutputTableRow;
         }
 
         $return .= "</table>\r\n";
+
+        break;
+    } // end list (elements)
+
+    case 'getregions' : {
+        $regions_request = mysql_query("SELECT DISTINCT region_title, region_abbr FROM {$reference} ");
+        while ($row = mysql_fetch_assoc($regions_request)) {
+            $regions_data[] = $row;
+        }
+
+        $data = array();
+        foreach ($regions_data as $region)
+        {
+            $data ['data'][] = array(
+                'type'      =>  'option',
+                'value'     =>  $region['region_abbr'],
+                'text'      =>  $region['region_title']
+            );
+        }
+        $data['error'] = 0;
+        $return = json_encode($data);
+        break;
+    } // end getregions
+
+
+    default : {
         break;
     }
-    case 'no-action': {
-        $tpl = new kwt('tpl/pfrf.districts.admin.html');
-
-        $tpl_override = array(
-            'html_title'    =>  "Административный раздел: удаление и добавление районов!",
-            'html_thisreference'    =>  '',
-            'html_base_exit_path'   =>  ''
-        );
-
-        $tpl->override( $tpl_override );
-
-        $return = $tpl->getcontent();
-        break;
-    }
-} //switch
+} // end switch
 CloseDB($link);
 print($return);
+die();

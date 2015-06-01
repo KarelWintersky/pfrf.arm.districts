@@ -4,9 +4,8 @@
  * Date: 25.04.15, time: 6:45
  */
 
-require_once('lib/kw.dbi.php');
-require_once('lib/kw.kwt.php');
 require_once('lib/kw.core.php');
+require_once('lib/kw.dbi.php');
 
 function download_send_headers($filename, $filesize)
 {

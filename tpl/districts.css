@@ -112,7 +112,6 @@ table tr.is_editable:hover > *  {
 
 /* layout/footer */
 footer {
-    font-size: small;
     position: fixed;
     background-color: #e0ffff;
     width: 100%;
