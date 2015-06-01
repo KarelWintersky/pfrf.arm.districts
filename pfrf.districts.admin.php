@@ -236,38 +236,46 @@ WHERE TABLE_NAME = '{$reference}'";
                     $content_rows[ 0 ]['control'] = 'control';
                     $i++;
                 }
-                    // next rows -- insert content
+
+                // next rows -- insert content
                 foreach ($ref_record as $rr_key => $rr_data)
                 {
                     $content_rows[ $i ][ $rr_key ] = $rr_data;
                 }
-                $content_rows[ $i ]['control'] = <<<xxx
+
+                $content_rows[ $i ]['control'] = <<<caseListControlButtonDeclaration
 <button class="action-edit button-edit" name="{$ref_record['id']}">Edit</button>
-xxx;
+caseListControlButtonDeclaration;
                 $i++;
             }
         }
         // визуализация
-        $return .= <<<ADV_TABLE_START
+        $return .= <<<caseListOutputTableStart
 <table border="1" width="100%">
-ADV_TABLE_START;
+caseListOutputTableStart;
+
         if (count($content_rows) > 1) {
             foreach ($content_rows as $n => $row)
             {
-                $td_start = ($n == 0) ? '<th>' : "<td>\r\n";
-                $td_end = ($n == 0) ? '</th>' : "</td>\r\n";
+                $td_start   = ($n == 0) ? '<th>'    : "<td>\r\n";
+                $td_end     = ($n == 0) ? '</th>'   : "</td>\r\n";
+
                 $return .= "<tr>\r\n";
 
                 foreach ($content_rows [ $n ] as $r_content) {
-                    $return .= <<<ADV_TABLE_TR
+
+                    $return .= <<<caseListOutputTableRow
 {$td_start} {$r_content} {$td_end}
-ADV_TABLE_TR;
+caseListOutputTableRow;
+
                 }
 
                 $return .= "</tr>\r\n";
             }
         } else {
-            $return .= '<tr><td colspan="' . count($content_rows[0]) . '"> Справочник пуст! '. $query .' </td></tr>';
+            $return .= '<tr><td colspan="' . count($content_rows[0]) . '"> Справочник пуст! '
+                . ifDebug($query)
+                .' </td></tr>';
         }
 
         $return .= "</table>\r\n";

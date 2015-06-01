@@ -19,11 +19,22 @@ $incoming_data = array(
     'district_ipmask'   =>  'IP-маска района',
 );
 
+$reference = dbConfig::$db_table;
+$link = ConnectDB( dbConfig::getConfig() );
+
+$return = '';
+
 switch ($action) {
     case 'get-comments' : {
         $result = array();
-        $q_comments = "SELECT column_name, column_comment FROM information_schema.COLUMNS " .
-            " WHERE TABLE_NAME = '{$reference}' AND column_name IN ( '". implode("' , '" , array_keys($incoming_data)) ."' )" ;
+        $q_comments =
+                "SELECT column_name, column_comment FROM information_schema.COLUMNS "
+                .
+                " WHERE TABLE_NAME = '{$reference}' AND column_name IN ( '"
+                .
+                implode("' , '" , array_keys($incoming_data))
+                .
+                "' )" ;
 
         $r = mysql_query($q_comments);
         $rn = @mysql_num_rows($r);
@@ -44,7 +55,7 @@ switch ($action) {
 
         $return = json_encode($result);
         break;
-    }
+    } // end get-comments
 
     case 'insert' : {
         if ($_GET['password'] == dbConfig::$master_password) {
@@ -63,7 +74,7 @@ switch ($action) {
         }
         $return = json_encode($result);
         break;
-    }
+    } // end insert
 
     case 'update' : {
         if ($_GET['password'] == dbConfig::$master_password) {
@@ -81,8 +92,10 @@ switch ($action) {
         }
         $return = json_encode($result);
         break;
-    }
+    } // end update
 
+    // обработчик "очистка региона" - специфическая функция
+    // очищает невизуализируемые поля по условию (region = ... )
     case 'clearregion' : {
         if ($_GET['password'] == dbConfig::$master_password) {
             $escaped_region = isset($_GET['region'])
@@ -124,7 +137,7 @@ switch ($action) {
         }
         $return = json_encode($result);
         break;
-    }
+    } // end clearregion (
 
     case 'remove' : {
         if ($_GET['password'] == dbConfig::$master_password) {
@@ -147,7 +160,7 @@ switch ($action) {
         }
         $return = json_encode($result);
         break;
-    }
+    } // end remove
 
     case 'load' : {
         $id = intval($_GET['id']);
@@ -172,22 +185,135 @@ switch ($action) {
         }
         $return = json_encode($result);
         break;
-    }
+    } // end loat (element)
 
     case 'list' : {
+        $fields = array();
+        $content_rows = array();
+        $header_row = array();
+
+        $q_comments = "SELECT column_name, column_comment FROM information_schema.COLUMNS
+WHERE TABLE_NAME = '{$reference}'";
+
+        $header_fields = mysql_query($q_comments) or die($q_comments);
+        while ($a_field = mysql_fetch_assoc($header_fields)) {
+            $fields [ $a_field['column_name'] ] = $a_field['column_comment'];
+        }
+        $fields['control'] = 'control';
+        foreach ($fields as $f_index=>$f_content ) {
+            $header_row[ $f_index ] =
+                ($f_content != '')
+                    ? $f_content
+                    : $f_index;
+        }
+        $return = '';
+
+        // where clause
+        $escaped_region = isset($_GET['region'])
+            ? mysql_real_escape_string($_GET['region'])
+            : "all_regions";
+
+        $WHERE_CLAUSE = ($escaped_region === "all_regions")
+            ? ""
+            : " WHERE region_abbr='{$escaped_region}' ";
+
+        //основной запрос (строим на основе РАБОЧЕГО НАБОРА)
+        $query = "SELECT id, ";
+        $query.= implode(" , ", array_keys($incoming_data));
+        $query.= " FROM {$reference} ";
+        $query.= $WHERE_CLAUSE;
+
+        $content_data = mysql_query( $query ) or die(mysql_error($link). ' query = ' . $query);
+        $i = 0;
+
+
+        // подготавливаем данные к визуализации
+        if (@mysql_num_rows($content_data) > 0)
+        {
+            while ($ref_record = mysql_fetch_assoc($content_data))
+            {
+                if ($i == 0)
+                {
+                    // first row -- insert header
+                    foreach ($ref_record as $rr_key => $rr_data)
+                    {
+                        $content_rows[ 0 ][ $rr_key ] = $header_row[ $rr_key ];
+                    }
+                    $content_rows[ 0 ]['control'] = 'control';
+                    $i++;
+                }
+
+                // next rows -- insert content
+                foreach ($ref_record as $rr_key => $rr_data)
+                {
+                    $content_rows[ $i ][ $rr_key ] = $rr_data;
+                }
+
+                $content_rows[ $i ]['control'] = <<<caseListControlButtonDeclaration
+<button class="action-edit button-edit" name="{$ref_record['id']}">Edit</button>
+caseListControlButtonDeclaration;
+                $i++;
+            }
+        }
+        // визуализация (заворачиваем "содержимое ячеек" в таблицу)
+        $return .= <<<caseListOutputTableStart
+<table border="1" width="100%">
+caseListOutputTableStart;
+
+        if (count($content_rows) > 1) {
+            foreach ($content_rows as $n => $row)
+            {
+                $td_start   = ($n == 0) ? '<th>'    : "<td>\r\n";
+                $td_end     = ($n == 0) ? '</th>'   : "</td>\r\n";
+
+                $return .= "<tr>\r\n";
+
+                foreach ($content_rows [ $n ] as $r_content) {
+
+                    $return .= <<<caseListOutputTableRow
+{$td_start} {$r_content} {$td_end}
+caseListOutputTableRow;
+
+                }
+
+                $return .= "</tr>\r\n";
+            }
+        } else {
+            $return .= '<tr><td colspan="' . count($content_rows[0]) . '"> Справочник пуст! '
+                . ifDebug($query)
+                .' </td></tr>';
+        }
+
+        $return .= "</table>\r\n";
+
+        break;
+    } // end list (elements)
+
+    case 'getregions' : {
+        $regions_request = mysql_query("SELECT DISTINCT region_title, region_abbr FROM {$reference} ");
+        while ($row = mysql_fetch_assoc($regions_request)) {
+            $regions_data[] = $row;
+        }
+
+        $data = array();
+        foreach ($regions_data as $region)
+        {
+            $data ['data'][] = array(
+                'type'      =>  'option',
+                'value'     =>  $region['region_abbr'],
+                'text'      =>  $region['region_title']
+            );
+        }
+        $data['error'] = 0;
+        $return = json_encode($data);
+        break;
+    } // end getregions
+
+
+    default : {
         break;
     }
-
-    case '...' : {
-        break;
-    }
-
-    case '...' : {
-        break;
-    }
-}
-
-
-
- 
- 
+} // end switch
+CloseDB($link);
+print($return);
+die();

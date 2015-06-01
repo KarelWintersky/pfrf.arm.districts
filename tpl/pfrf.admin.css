@@ -1,0 +1,40 @@
+.jquery-ui-form {
+    font-family: "Trebuchet MS", "Helvetica", "Arial",  "Verdana", "sans-serif";
+    font-size: 80%;
+}
+label, input { display:block; }
+input.text {
+    margin-bottom:12px;
+    width:95%;
+    padding: .4em;
+}
+fieldset {
+    padding:0;
+    border:0;
+}
+h1 {
+    font-size: 1.2em;
+    margin: .6em 0;
+}
+.ui-dialog .ui-state-error {
+    padding: .3em;
+}
+#ref_list {
+    height: 600px;
+    width: 99%;
+    border: 1px solid gray;
+    overflow-y: scroll;
+}
+th {
+    text-align: center;
+}
+.button-large {
+    height: 60px;
+}
+.button-edit {
+    margin: 5px;
+    height: 30px;
+}
+table {
+    empty-cells: show;
+}
