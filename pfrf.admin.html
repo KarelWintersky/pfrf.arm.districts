@@ -1,11 +1,12 @@
 <html>
 <head>
-<title>{%html_title%}</title>
+<title>Административный раздел: удаление и добавление районов!</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
 <script src="lib/jquery.min.js"></script>
 <script src="tpl/jquery-ui-1.10.3.custom.min.js"></script>
 <script type="text/javascript" src="lib/kw.options.js"></script>
+<script type="text/javascript" src="pfrf.admin.js"></script>
 <link rel="stylesheet" type="text/css" href="tpl/jquery-ui-1.10.3.custom.min.css">
 <link rel="stylesheet" type="text/css" href="tpl/pfrf.districts.css" />
 
@@ -235,11 +236,11 @@ $(document).ready(function () {
     }, 'all_regions');
 
     /*
-    * Поля ввода и вообще форма добавления/редактирования строятся на основе ответа функции
-    * loadEditableFields() - Она выполняет запрос ?action=get-comments
-    * ВАЖНО: поля для редактирования описаны в PHP-файле, переменная $incoming_data
-    * Именно на её основе выгружаются комментарии редактируемым полям и сам список полей
-    * */
+     * Поля ввода и вообще форма добавления/редактирования строятся на основе ответа функции
+     * loadEditableFields() - Она выполняет запрос ?action=get-comments
+     * ВАЖНО: поля для редактирования описаны в PHP-файле, переменная $incoming_data
+     * Именно на её основе выгружаются комментарии редактируемым полям и сам список полей
+     * */
 
     fields_list = loadEditableFields();
 
